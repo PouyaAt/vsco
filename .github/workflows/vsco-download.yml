@@ -1,3 +1,5 @@
+
+          
 name: VSCO Downloader with Logs
 
 on:
@@ -56,3 +58,6 @@ jobs:
           git commit -m "VSCO run for ${{ github.event.inputs.username }} — logs & media"
           git push origin HEAD
         fi
+    - name: Probe downloader sites
+      run: |
+        python site_probe.py
