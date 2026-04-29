@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up Python
@@ -23,16 +23,17 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
+        python -m pip install --upgrade pip
+        pip install requests beautifulsoup4
 
     - name: Run VSCO downloader
       run: |
         python vsco_downloader.py "${{ github.event.inputs.username }}"
 
-    - name: Commit and push downloaded files
+    - name: Commit and push downloads
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git add downloads/
-        git commit -m "Downloaded VSCO posts for ${{ github.event.inputs.username }}" || echo "No changes"
+        git commit -m "Downloaded VSCO posts for ${{ github.event.inputs.username }}" || echo "No new files"
         git push
