@@ -1,5 +1,4 @@
 
-          
 name: VSCO Downloader with Logs
 
 on:
@@ -61,3 +60,6 @@ jobs:
     - name: Probe downloader sites
       run: |
         python site_probe.py
+    - name: Detect downloader APIs
+      run: |
+        python api_detector.py
