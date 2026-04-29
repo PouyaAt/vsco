@@ -1,4 +1,4 @@
-name: VSCO Downloader
+name: VSCO Downloader with Logs
 
 on:
   workflow_dispatch:
@@ -26,14 +26,23 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests beautifulsoup4
 
-    - name: Run VSCO downloader
+    - name: Run VSCO downloader and capture logs
       run: |
-        python vsco_downloader.py "${{ github.event.inputs.username }}"
+        mkdir -p downloads logs
+        (
+          echo "==== VSCO Downloader Started ===="
+          echo "Username: ${{ github.event.inputs.username }}"
+          python vsco_downloader.py "${{ github.event.inputs.username }}" 2>&1
+          echo "==== Completed ===="
+        ) | tee logs/log.txt
 
-    - name: Commit and push downloads
+        # Save any errors found from log.txt into error.txt for easier tracking
+        grep -i "error" logs/log.txt > logs/error.txt || echo "No errors detected." > logs/error.txt
+
+    - name: Commit and push results (downloads + logs)
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git add downloads/
-        git commit -m "Downloaded VSCO posts for ${{ github.event.inputs.username }}" || echo "No new files"
+        git add downloads/ logs/
+        git commit -m "VSCO run for ${{ github.event.inputs.username }} — logs & media" || echo "Nothing new to commit"
         git push
