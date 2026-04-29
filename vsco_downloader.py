@@ -1,40 +1,42 @@
 import requests
 import os
 import sys
-from bs4 import BeautifulSoup
-
-BASE_URL = "https://vsco.co"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Connection": "keep-alive"
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "application/json"
 }
 
 
-def get_profile_images(username):
-    url = f"{BASE_URL}/{username}/images"
+def get_site_id(username):
+    url = f"https://vsco.co/api/2.0/sites?subdomain={username}"
 
     r = requests.get(url, headers=HEADERS)
     r.raise_for_status()
 
-    soup = BeautifulSoup(r.text, "html.parser")
+    data = r.json()
 
-    images = set()
-
-    for img in soup.find_all("img"):
-        src = img.get("src") or img.get("data-src")
-
-        if src and "vsco" in src:
-            if src.startswith("//"):
-                src = "https:" + src
-            images.add(src)
-
-    return list(images)
+    return data["sites"][0]["id"]
 
 
-def download_images(urls, folder):
+def get_media(site_id):
+    url = f"https://vsco.co/api/2.0/medias?site_id={site_id}&size=100"
+
+    r = requests.get(url, headers=HEADERS)
+    r.raise_for_status()
+
+    data = r.json()
+
+    media_urls = []
+
+    for item in data["media"]:
+        url = item["responsive_url"]
+        media_urls.append(url)
+
+    return media_urls
+
+
+def download(urls, folder):
     os.makedirs(folder, exist_ok=True)
 
     for url in urls:
@@ -43,23 +45,25 @@ def download_images(urls, folder):
 
         print("Downloading:", url)
 
-        r = requests.get(url, headers=HEADERS, stream=True)
+        r = requests.get(url, stream=True)
 
         if r.status_code == 200:
             with open(path, "wb") as f:
                 for chunk in r.iter_content(8192):
                     f.write(chunk)
-        else:
-            print("Failed:", url, r.status_code)
 
 
 if __name__ == "__main__":
     username = sys.argv[1]
 
-    folder = f"downloads/{username}"
+    print("Getting site id...")
+    site_id = get_site_id(username)
 
-    urls = get_profile_images(username)
+    print("Site id:", site_id)
 
-    print("Found", len(urls), "images")
+    print("Getting media...")
+    media = get_media(site_id)
 
-    download_images(urls, folder)
+    print("Found", len(media), "posts")
+
+    download(media, f"downloads/{username}")
