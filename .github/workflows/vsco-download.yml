@@ -8,6 +8,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   download:
     runs-on: ubuntu-latest
@@ -28,21 +31,28 @@ jobs:
 
     - name: Run VSCO downloader and capture logs
       run: |
-        mkdir -p downloads logs
-        (
-          echo "==== VSCO Downloader Started ===="
-          echo "Username: ${{ github.event.inputs.username }}"
-          python vsco_downloader.py "${{ github.event.inputs.username }}" 2>&1
-          echo "==== Completed ===="
-        ) | tee logs/log.txt
+        mkdir -p downloads
+        mkdir -p logs
 
-        # Save any errors found from log.txt into error.txt for easier tracking
+        echo "==== VSCO Downloader Started ====" > logs/log.txt
+        echo "Username: ${{ github.event.inputs.username }}" >> logs/log.txt
+
+        python vsco_downloader.py "${{ github.event.inputs.username }}" >> logs/log.txt 2>&1 || true
+
+        echo "==== Completed ====" >> logs/log.txt
+
         grep -i "error" logs/log.txt > logs/error.txt || echo "No errors detected." > logs/error.txt
 
-    - name: Commit and push results (downloads + logs)
+    - name: Commit and push results
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git add downloads/ logs/
-        git commit -m "VSCO run for ${{ github.event.inputs.username }} — logs & media" || echo "Nothing new to commit"
-        git push
+
+        git add downloads logs || true
+
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "VSCO run for ${{ github.event.inputs.username }} — logs & media"
+          git push origin HEAD
+        fi
