@@ -1,0 +1,38 @@
+name: VSCO Downloader
+
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: "VSCO username to download"
+        required: true
+        type: string
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run VSCO downloader
+      run: |
+        python vsco_downloader.py "${{ github.event.inputs.username }}"
+
+    - name: Commit and push downloaded files
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git add downloads/
+        git commit -m "Downloaded VSCO posts for ${{ github.event.inputs.username }}" || echo "No changes"
+        git push
